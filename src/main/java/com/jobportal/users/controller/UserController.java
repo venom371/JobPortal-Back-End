@@ -10,7 +10,6 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,15 +17,20 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.jobportal.common.ApiResponse;
+import com.jobportal.exceptions.DefaultException;
+import com.jobportal.users.beans.UserLogin;
+import com.jobportal.users.impl.UserServiceImpl;
 import com.jobportal.users.model.User;
-import com.jobportal.users.service.UserService;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
     @Autowired
-    public UserService userService;
+    public UserServiceImpl userService;
 
     @PostMapping("/createUser")
     public ResponseEntity<String> createUser(@RequestBody User userData) {
@@ -37,7 +41,7 @@ public class UserController {
     }
 
     @PostMapping("/uploadImages")
-    public ResponseEntity<ApiResponse> uploadFiles(@RequestParam("files") List<MultipartFile> files, @RequestParam("userId") String userId) {
+    public ResponseEntity<ApiResponse> uploadFiles(@RequestParam List<MultipartFile> files, @RequestParam String userId) {
         try{
             userService.uploadFiles(files, userId);
             return ResponseEntity.ok().body(new ApiResponse(true, "Files saved successfully"));
@@ -49,6 +53,15 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse(false, e.getMessage(), e.getStackTrace()));
         }
     }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> loginUser(@RequestBody UserLogin payload, HttpServletResponse response) throws DefaultException {
+        
+        Cookie jwtCookie = userService.loginUser(payload);
+        response.addCookie(jwtCookie);
+        return ResponseEntity.ok().body(new ApiResponse(true, "Login successful"));
+    }
+    
 
     @GetMapping("/verifyUserEmailAndPhoneNo")
     public ResponseEntity<String> verifyUserEmailAndPhoneNo(@RequestParam String email, @RequestParam String phoneNo) {
